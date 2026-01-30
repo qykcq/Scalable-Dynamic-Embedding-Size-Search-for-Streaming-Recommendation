@@ -10,6 +10,7 @@ from ActorCritic import Actor, Critic
 from State import State
 from IOManager import IOManager
 from base_recsys.LightGCN import LightGCN
+import time
 
 
 class Engine:
@@ -302,6 +303,7 @@ class Engine:
             conv_fitness = self.update_recsys()
         print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

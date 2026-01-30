@@ -140,7 +140,7 @@ class Engine:
         return sum(total_loss) / step_num
 
     def train_till_convergence(self, recsys, dataset, path):
-        print('Training recsys til convergence...')
+        print('Training recsys till convergence...')
         patience = self.config.MAX_PATIENCE
         best_metric, best_recall, best_ndcg = 0, 0, 0
         recsys.train()
@@ -295,5 +295,6 @@ class Engine:
                     break
             conv_fitness = self.update_recsys()
         self.report_final_results()
+
 
 

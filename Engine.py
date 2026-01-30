@@ -275,7 +275,7 @@ class Engine:
         return conv_fitness
 
     def streaming_size_search(self):
-
+        total_start_time = time.time()
         conv_fitness = -1
         self.init_dataset(0)
         if self.config.DATASET_NAME == 'amazon-book':
@@ -284,6 +284,7 @@ class Engine:
             assert self.loader.num_of_splits() - 1 == 10
 
         for t in range(self.loader.num_of_splits()):
+            time_seg_start = time.time()
             print('*' * 20 + ' t = {} '.format(t) + '*' * 20)
             # update the policy
             if t > 0:
@@ -293,8 +294,12 @@ class Engine:
                     self.init_dataset(t)
                 except:
                     break
+            iter_time = time.time() - time_seg_start
+            print(f't = {t}, iteration time = {iter_time}s')
             conv_fitness = self.update_recsys()
+        print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

@@ -185,10 +185,12 @@ class Engine:
 
         self.train_n_steps(recsys, self.fine_tune_steps)
 
+        t1 = time.time()
         curr_fitness, msg, _, _ = self.evaluator.eval_rec(recsys, dataset)
-        print('eval_rec', curr_fitness, msg)
+        print('eval_rec', curr_fitness, msg, time.time() - t1)
+        t1 = time.time()
         curr_fitness2, msg2, _, _ = self.evaluator.eval_rec_fast(recsys, dataset)
-        print('eval_rec_fast', curr_fitness2, msg2)
+        print('eval_rec_fast', curr_fitness2, msg2, time.time() - t1)
 
         reward = curr_fitness / conv_fitness
         rescaled_reward = 10 * ((reward - self.low) / (self.high - self.low))
@@ -303,6 +305,7 @@ class Engine:
             conv_fitness = self.update_recsys()
         print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

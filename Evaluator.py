@@ -80,20 +80,104 @@ class Evaluator:
         avg, msg, mean_recall, mean_ndcg = self.process_ranking_metrics(recalls_5, recalls_10, recalls_20, ndcgs_5, ndcgs_10, ndcgs_20)
         return avg, msg, mean_recall, mean_ndcg
 
+    # def eval_rec_fast(self, recsys, dataset, ks=(5, 10, 20)):
+    #     """
+    #     Fast + EXACT equivalence to eval_rec():
+    #     - same Recall@K
+    #     - same NDCG@K
+    #     """
+    #     recsys.eval()
+    
+    #     sampled_users = np.asarray(dataset.test_user_vocab)
+    #     sampled_items = np.asarray(dataset.test_item_vocab)
+    
+    #     ks = tuple(sorted(ks))
+    #     max_k = max(ks)
+    #     discounts = 1.0 / np.log2(np.arange(2, max_k + 2))  # length max_k
+    
+    #     recalls = {k: [] for k in ks}
+    #     ndcgs   = {k: [] for k in ks}
+    
+    #     num_chunks = 1
+    #     chunk_size = math.ceil(len(sampled_users) / num_chunks)
+    
+    #     for chunk in range(num_chunks):
+    #         start = chunk * chunk_size
+    #         end   = min(len(sampled_users), (chunk + 1) * chunk_size)
+    #         users_in_chunk = sampled_users[start:end]
+    
+    #         y_pred, topk_ind = self.get_y_pred(recsys, users_in_chunk, sampled_items, dataset)
+    #         y_pred   = np.asarray(y_pred)
+    #         topk_ind = np.asarray(topk_ind)
+    
+    #         assert y_pred.shape[0] == len(users_in_chunk)
+    #         assert topk_ind.shape[0] == len(users_in_chunk)
+    
+    #         # keep only what we need
+    #         if topk_ind.shape[1] > max_k:
+    #             topk_ind = topk_ind[:, :max_k]
+    
+    #         for row_idx, user_id in enumerate(users_in_chunk):
+    #             # y_true once
+    #             rel = np.asarray(dataset.get_y_true_by_user(user_id)[sampled_items])
+    #             total_pos = float(rel.sum())
+    #             if total_pos <= 0:
+    #                 for k in ks:
+    #                     recalls[k].append(0.0)
+    #                     ndcgs[k].append(0.0)
+    #                 continue
+    
+    #             # ---- ranking order for topK (keep for safety) ----
+    #             idx = topk_ind[row_idx]
+    #             scores_k = y_pred[row_idx, idx]
+    #             order = np.argsort(scores_k)[::-1]   # descending
+    #             idx = idx[order]
+    
+    #             top_rel = rel[idx].astype(np.float64)  # length <= max_k
+    #             L = len(top_rel)
+    
+    #             # Recall prefix
+    #             cumsum_rel = np.cumsum(top_rel)                 # [L]
+    
+    #             # DCG prefix
+    #             dcg_prefix = np.cumsum(top_rel * discounts[:L]) # [L]
+    
+    #             # ---- IDCG prefix (SORT ONCE PER USER) ----
+    #             # matches original "ideal_rank = np.sort(rel)[::-1]"
+    #             ideal_sorted = np.sort(rel)[::-1]
+    #             ideal_top = ideal_sorted[:L].astype(np.float64)         # only need up to max_k
+    #             idcg_prefix = np.cumsum(ideal_top * discounts[:L])      # [L]
+    
+    #             for k in ks:
+    #                 kk = min(k, L)
+    
+    #                 # Recall@K
+    #                 recalls[k].append(cumsum_rel[kk - 1] / total_pos)
+    
+    #                 # NDCG@K
+    #                 denom = idcg_prefix[kk - 1]
+    #                 ndcgs[k].append(dcg_prefix[kk - 1] / denom if denom > 0 else 0.0)
+    
+    #     avg, msg, mean_recall, mean_ndcg = self.process_ranking_metrics(
+    #         recalls[5], recalls[10], recalls[20],
+    #         ndcgs[5], ndcgs[10], ndcgs[20]
+    #     )
+    #     return avg, msg, mean_recall, mean_ndcg
+
     def eval_rec_fast(self, recsys, dataset, ks=(5, 10, 20)):
         """
-        Fast + EXACT equivalence to eval_rec():
-        - same Recall@K
-        - same NDCG@K
+        Optimized evaluator with EXACT equivalence to eval_rec():
+        - identical Recall@K
+        - identical NDCG@K
         """
+    
         recsys.eval()
     
         sampled_users = np.asarray(dataset.test_user_vocab)
         sampled_items = np.asarray(dataset.test_item_vocab)
     
-        ks = tuple(sorted(ks))
         max_k = max(ks)
-        discounts = 1.0 / np.log2(np.arange(2, max_k + 2))  # length max_k
+        discounts = 1.0 / np.log2(np.arange(2, max_k + 2))  # DCG discounts
     
         recalls = {k: [] for k in ks}
         ndcgs   = {k: [] for k in ks}
@@ -106,20 +190,25 @@ class Evaluator:
             end   = min(len(sampled_users), (chunk + 1) * chunk_size)
             users_in_chunk = sampled_users[start:end]
     
-            y_pred, topk_ind = self.get_y_pred(recsys, users_in_chunk, sampled_items, dataset)
-            y_pred   = np.asarray(y_pred)
-            topk_ind = np.asarray(topk_ind)
+            # Predictions
+            y_pred, topk_ind = self.get_y_pred(
+                recsys, users_in_chunk, sampled_items, dataset
+            )
+            y_pred    = np.asarray(y_pred)
+            topk_ind  = np.asarray(topk_ind)
     
             assert y_pred.shape[0] == len(users_in_chunk)
             assert topk_ind.shape[0] == len(users_in_chunk)
     
-            # keep only what we need
+            # Only keep top max_k (torch.topk may return exactly k already)
             if topk_ind.shape[1] > max_k:
                 topk_ind = topk_ind[:, :max_k]
     
             for row_idx, user_id in enumerate(users_in_chunk):
-                # y_true once
-                rel = np.asarray(dataset.get_y_true_by_user(user_id)[sampled_items])
+                # Ground truth (fetch ONCE)
+                y_true_row = dataset.get_y_true_by_user(user_id)
+                rel = np.asarray(y_true_row[sampled_items])  # [n_items]
+    
                 total_pos = float(rel.sum())
                 if total_pos <= 0:
                     for k in ks:
@@ -127,42 +216,40 @@ class Evaluator:
                         ndcgs[k].append(0.0)
                     continue
     
-                # ---- ranking order for topK (keep for safety) ----
-                idx = topk_ind[row_idx]
-                scores_k = y_pred[row_idx, idx]
-                order = np.argsort(scores_k)[::-1]   # descending
+                # ---- enforce correct ranking order (CRITICAL for NDCG) ----
+                idx = topk_ind[row_idx]                 # column indices
+                scores_k = y_pred[row_idx, idx]         # predicted scores
+    
+                order = np.argsort(scores_k)[::-1]      # descending score
                 idx = idx[order]
     
-                top_rel = rel[idx].astype(np.float64)  # length <= max_k
-                L = len(top_rel)
+                top_rel = rel[idx].astype(np.float64)
     
-                # Recall prefix
-                cumsum_rel = np.cumsum(top_rel)                 # [L]
-    
-                # DCG prefix
-                dcg_prefix = np.cumsum(top_rel * discounts[:L]) # [L]
-    
-                # ---- IDCG prefix (SORT ONCE PER USER) ----
-                # matches original "ideal_rank = np.sort(rel)[::-1]"
-                ideal_sorted = np.sort(rel)[::-1]
-                ideal_top = ideal_sorted[:L].astype(np.float64)         # only need up to max_k
-                idcg_prefix = np.cumsum(ideal_top * discounts[:L])      # [L]
+                # Prefix sums for Recall
+                cumsum_rel = np.cumsum(top_rel)
     
                 for k in ks:
-                    kk = min(k, L)
+                    kk = min(k, len(top_rel))
     
-                    # Recall@K
-                    recalls[k].append(cumsum_rel[kk - 1] / total_pos)
+                    # Recall@K (identical to original)
+                    hit_k = cumsum_rel[kk - 1]
+                    recalls[k].append(hit_k / total_pos)
     
-                    # NDCG@K
-                    denom = idcg_prefix[kk - 1]
-                    ndcgs[k].append(dcg_prefix[kk - 1] / denom if denom > 0 else 0.0)
+                    # DCG@K
+                    dcg = np.sum(top_rel[:kk] * discounts[:kk])
+    
+                    # IDCG@K (EXACTLY matches original implementation)
+                    ideal = np.sort(rel)[::-1][:kk]
+                    idcg = np.sum(ideal * discounts[:len(ideal)])
+    
+                    ndcgs[k].append(dcg / idcg if idcg > 0 else 0.0)
     
         avg, msg, mean_recall, mean_ndcg = self.process_ranking_metrics(
             recalls[5], recalls[10], recalls[20],
             ndcgs[5], ndcgs[10], ndcgs[20]
         )
         return avg, msg, mean_recall, mean_ndcg
+
 
 
     def get_y_pred(self, recsys, sampled_users, sampled_items, dataset):
@@ -201,6 +288,7 @@ class Evaluator:
             topk_shape = topk_ind.size()
             assert topk_shape[0] == len(sampled_users) and topk_shape[1] == 20
             return test_scores.numpy(), topk_ind.numpy()
+
 
 
 

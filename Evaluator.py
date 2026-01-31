@@ -35,52 +35,52 @@ class Evaluator:
         msg = msg.format(mean_recall_5, mean_ndcg_5, mean_recall_10, mean_ndcg_10, mean_recall_20, mean_ndcg_20)
         return avg, msg, mean_recall_20, mean_ndcg_20
 
-    def eval_rec(self, recsys, dataset):
-        recsys.eval()
-        sampled_users = np.array(dataset.test_user_vocab)
-        sampled_items = np.array(dataset.test_item_vocab)
-        recalls_20, ndcgs_20, recalls_10, ndcgs_10, recalls_5, ndcgs_5 = [], [], [], [], [], []
+    # def eval_rec(self, recsys, dataset):
+    #     recsys.eval()
+    #     sampled_users = np.array(dataset.test_user_vocab)
+    #     sampled_items = np.array(dataset.test_item_vocab)
+    #     recalls_20, ndcgs_20, recalls_10, ndcgs_10, recalls_5, ndcgs_5 = [], [], [], [], [], []
 
-        num_chunks = 1
-        chunk_size = math.ceil(len(sampled_users) / num_chunks)
-        for chunk in range(num_chunks):
-            start_ind = chunk * chunk_size
-            end_ind = min(len(sampled_users), (chunk + 1) * chunk_size)
-            users_in_chunk = sampled_users[start_ind: end_ind]
+    #     num_chunks = 1
+    #     chunk_size = math.ceil(len(sampled_users) / num_chunks)
+    #     for chunk in range(num_chunks):
+    #         start_ind = chunk * chunk_size
+    #         end_ind = min(len(sampled_users), (chunk + 1) * chunk_size)
+    #         users_in_chunk = sampled_users[start_ind: end_ind]
 
-            y_pred, topk_ind = self.get_y_pred(recsys, users_in_chunk, sampled_items, dataset)
+    #         y_pred, topk_ind = self.get_y_pred(recsys, users_in_chunk, sampled_items, dataset)
 
-            assert len(y_pred) == len(users_in_chunk)
-            for user_id in users_in_chunk:
-                # assert dataset.test_user_vocab[user_id] == user_id
-                total = np.sum(dataset.get_y_true_by_user(user_id)[sampled_items])
-                # the position of user_id
-                user_pos = np.asarray(users_in_chunk == user_id).nonzero()
-                assert len(user_pos[0]) == 1
-                user_pos = user_pos[0][0]
-                assert dataset.get_y_true_by_user(user_id)[sampled_items].shape == y_pred[user_pos].shape
+    #         assert len(y_pred) == len(users_in_chunk)
+    #         for user_id in users_in_chunk:
+    #             # assert dataset.test_user_vocab[user_id] == user_id
+    #             total = np.sum(dataset.get_y_true_by_user(user_id)[sampled_items])
+    #             # the position of user_id
+    #             user_pos = np.asarray(users_in_chunk == user_id).nonzero()
+    #             assert len(user_pos[0]) == 1
+    #             user_pos = user_pos[0][0]
+    #             assert dataset.get_y_true_by_user(user_id)[sampled_items].shape == y_pred[user_pos].shape
 
-                # dataset.get_y_true_by_user(user_id) is only one single row
-                y_true_selected = dataset.get_y_true_by_user(user_id)[sampled_items]
-                # y_pred_selected is only a single row
-                y_pred_selected = y_pred[user_pos]
-                # topk indices associated with this specific user
-                selected_topk_ind = topk_ind[user_pos]
-                zipped = list(zip(y_true_selected[selected_topk_ind], y_pred_selected[selected_topk_ind]))
+    #             # dataset.get_y_true_by_user(user_id) is only one single row
+    #             y_true_selected = dataset.get_y_true_by_user(user_id)[sampled_items]
+    #             # y_pred_selected is only a single row
+    #             y_pred_selected = y_pred[user_pos]
+    #             # topk indices associated with this specific user
+    #             selected_topk_ind = topk_ind[user_pos]
+    #             zipped = list(zip(y_true_selected[selected_topk_ind], y_pred_selected[selected_topk_ind]))
 
-                recalls_20.append(self.recall_at_k(zipped, total, k=20))
-                recalls_10.append(self.recall_at_k(zipped, total, k=10))
-                recalls_5.append(self.recall_at_k(zipped, total, k=5))
+    #             recalls_20.append(self.recall_at_k(zipped, total, k=20))
+    #             recalls_10.append(self.recall_at_k(zipped, total, k=10))
+    #             recalls_5.append(self.recall_at_k(zipped, total, k=5))
 
-                ideal_rank = np.sort(dataset.get_y_true_by_user(user_id)[sampled_items])[::-1]
+    #             ideal_rank = np.sort(dataset.get_y_true_by_user(user_id)[sampled_items])[::-1]
 
-                ndcgs_20.append(self.ndcg_at_k(zipped, ideal_rank, k=20))
-                ndcgs_10.append(self.ndcg_at_k(zipped, ideal_rank, k=10))
-                ndcgs_5.append(self.ndcg_at_k(zipped, ideal_rank, k=5))
-        avg, msg, mean_recall, mean_ndcg = self.process_ranking_metrics(recalls_5, recalls_10, recalls_20, ndcgs_5, ndcgs_10, ndcgs_20)
-        return avg, msg, mean_recall, mean_ndcg
+    #             ndcgs_20.append(self.ndcg_at_k(zipped, ideal_rank, k=20))
+    #             ndcgs_10.append(self.ndcg_at_k(zipped, ideal_rank, k=10))
+    #             ndcgs_5.append(self.ndcg_at_k(zipped, ideal_rank, k=5))
+    #     avg, msg, mean_recall, mean_ndcg = self.process_ranking_metrics(recalls_5, recalls_10, recalls_20, ndcgs_5, ndcgs_10, ndcgs_20)
+    #     return avg, msg, mean_recall, mean_ndcg
 
-    def eval_rec_fast(self, recsys, dataset, ks=(5, 10, 20)):
+    def eval_rec(self, recsys, dataset, ks=(5, 10, 20)):
         """
         Fast + EXACT equivalence to eval_rec():
         - same Recall@K
@@ -200,6 +200,7 @@ class Evaluator:
             topk_shape = topk_ind.size()
             assert topk_shape[0] == len(sampled_users) and topk_shape[1] == 20
             return test_scores.numpy(), topk_ind.numpy()
+
 
 
 

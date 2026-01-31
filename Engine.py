@@ -222,7 +222,7 @@ class Engine:
 
     def update_policy(self, max_fitness):
         step = 0
-        while True:
+        while step <= 5: # True:
             print('-' * 25 + 'step {}'.format(step) + '-' * 25, flush=True)
 
             prev_state = self.state.get_current_state(self.n_users, self.n_items)
@@ -305,6 +305,7 @@ class Engine:
             conv_fitness = self.update_recsys()
         print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

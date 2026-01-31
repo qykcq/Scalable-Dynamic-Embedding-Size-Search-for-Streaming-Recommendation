@@ -150,7 +150,7 @@ class Engine:
         last_loss = -1
 
         metrics = []
-        for i in range(1, 2):
+        for i in range(100000):
             loss = self.train_n_steps(recsys, self.fine_tune_steps)
             metric, msg, mean_recall, mean_ndcg = self.evaluator.eval_rec(recsys, dataset)
             metrics.append(metric)
@@ -185,13 +185,8 @@ class Engine:
 
         self.train_n_steps(recsys, self.fine_tune_steps)
 
-        t1 = time.time()
         curr_fitness, msg, _, _ = self.evaluator.eval_rec(recsys, dataset)
-        print('eval_rec', curr_fitness, msg, time.time() - t1)
-        t1 = time.time()
-        curr_fitness2, msg2, _, _ = self.evaluator.eval_rec_fast(recsys, dataset)
-        print('eval_rec_fast', curr_fitness2, msg2, time.time() - t1)
-
+        print(msg)
         reward = curr_fitness / conv_fitness
         rescaled_reward = 10 * ((reward - self.low) / (self.high - self.low))
         print('Reward: {} / {} = {} ==> {}'.format(curr_fitness, conv_fitness, reward, rescaled_reward))
@@ -222,7 +217,7 @@ class Engine:
 
     def update_policy(self, max_fitness):
         step = 0
-        while step <= 5: # True:
+        while True:
             print('-' * 25 + 'step {}'.format(step) + '-' * 25, flush=True)
 
             prev_state = self.state.get_current_state(self.n_users, self.n_items)
@@ -305,6 +300,7 @@ class Engine:
             conv_fitness = self.update_recsys()
         print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

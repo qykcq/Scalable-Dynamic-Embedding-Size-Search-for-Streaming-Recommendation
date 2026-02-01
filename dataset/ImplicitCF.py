@@ -177,7 +177,6 @@ class ImplicitCF(object):
                 if pos_id not in y:
                     return pos_id
 
-        config = self.config
         # only select users from the current df excluding the test set
         selected_indices = np.random.choice(
             self.current_users, batch_size, replace=len(self.current_users) < batch_size
@@ -195,12 +194,14 @@ class ImplicitCF(object):
         )
 
         users = np.array(interact['userID'])
-        users = torch.tensor(users).long().to(config.device)
+        users = torch.tensor(users).long().to(self.config.device)
+        print(users.device)
 
         pos_items = np.array(pos_items)
-        pos_items = torch.tensor(pos_items).long().to(config.device)
+        pos_items = torch.tensor(pos_items).long().to(self.config.device)
 
         neg_items = np.array(neg_items)
-        neg_items = torch.tensor(neg_items).long().to(config.device)
+        neg_items = torch.tensor(neg_items).long().to(self.config.device)
 
         return users, pos_items, neg_items
+

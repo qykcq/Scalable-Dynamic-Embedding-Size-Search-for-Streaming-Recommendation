@@ -195,7 +195,7 @@ class ImplicitCF(object):
 
         users = np.array(interact['userID'])
         users = torch.tensor(users).long().to(self.config.device)
-        print(users.device)
+        print(self.config.device, users.device)
 
         pos_items = np.array(pos_items)
         pos_items = torch.tensor(pos_items).long().to(self.config.device)
@@ -204,4 +204,5 @@ class ImplicitCF(object):
         neg_items = torch.tensor(neg_items).long().to(self.config.device)
 
         return users, pos_items, neg_items
+
 

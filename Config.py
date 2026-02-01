@@ -70,7 +70,7 @@ class Config:
         if len(sys.argv) > 1:
             os.environ["CUDA_VISIBLE_DEVICES"] = sys.argv[1]
         GPU = torch.cuda.is_available()
-        self.device = torch.device('cuda' if GPU else "cpu")
+        self.device = torch.device('cuda:3' if GPU else "cpu")
         self.SEED = seed
         self.BATCH_SIZE = 10000
         self.MAX_PATIENCE = 3
@@ -114,4 +114,5 @@ class Config:
             r = r / np.sum(r)
             pvals.append(r)
         return np.mean(pvals, axis=0)
+
 

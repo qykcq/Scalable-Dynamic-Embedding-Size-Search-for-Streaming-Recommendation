@@ -27,7 +27,6 @@ class Engine:
         self.io.delete_folder_contents('tmp/model/{}/'.format(self.config.ID))
         
         self.loader = DatasetLoader(config, config.DATASET_NAME)
-        print(123, config.device)
 
         self.evaluator = Evaluator(config)
 
@@ -301,6 +300,7 @@ class Engine:
             conv_fitness = self.update_recsys()
         print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

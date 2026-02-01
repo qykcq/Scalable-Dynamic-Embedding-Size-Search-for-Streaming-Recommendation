@@ -152,7 +152,7 @@ class Engine:
         metrics = []
         for i in range(100000):
             loss = self.train_n_steps(recsys, self.fine_tune_steps)
-            metric, msg, mean_recall, mean_ndcg = self.evaluator.eval_rec(recsys, dataset)
+            metric, msg, mean_recall, mean_ndcg = self.evaluator.eval_rec(recsys, dataset, test=True)
             metrics.append(metric)
 
             lr = recsys.optimiser.param_groups[0]['lr']
@@ -300,6 +300,7 @@ class Engine:
             conv_fitness = self.update_recsys()
         print('[TOTAL] streaming size search time:', time.time() - total_start_time)
         self.report_final_results()
+
 
 
 

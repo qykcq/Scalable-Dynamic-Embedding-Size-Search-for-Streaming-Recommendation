@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import torch
+import time 
 
 
 class Evaluator:
@@ -80,7 +81,7 @@ class Evaluator:
     #     avg, msg, mean_recall, mean_ndcg = self.process_ranking_metrics(recalls_5, recalls_10, recalls_20, ndcgs_5, ndcgs_10, ndcgs_20)
     #     return avg, msg, mean_recall, mean_ndcg
 
-    def eval_rec(self, recsys, dataset, ks=(5, 10, 20)):
+    def eval_rec(self, recsys, dataset, test=False, ks=(5, 10, 20)):
         """
         Fast + EXACT equivalence to eval_rec():
         - same Recall@K
@@ -100,15 +101,15 @@ class Evaluator:
     
         num_chunks = 1
         chunk_size = math.ceil(len(sampled_users) / num_chunks)
-    
+        t1 = time.time()
         for chunk in range(num_chunks):
             start = chunk * chunk_size
             end   = min(len(sampled_users), (chunk + 1) * chunk_size)
             users_in_chunk = sampled_users[start:end]
     
             y_pred, topk_ind = self.get_y_pred(recsys, users_in_chunk, sampled_items, dataset)
-            y_pred   = np.asarray(y_pred)
-            topk_ind = np.asarray(topk_ind)
+            if test:
+                print('Time used for get_y_pred during test', time.time() - t1)
     
             assert y_pred.shape[0] == len(users_in_chunk)
             assert topk_ind.shape[0] == len(users_in_chunk)
@@ -200,6 +201,7 @@ class Evaluator:
             topk_shape = topk_ind.size()
             assert topk_shape[0] == len(sampled_users) and topk_shape[1] == 20
             return test_scores.numpy(), topk_ind.numpy()
+
 
 
 
